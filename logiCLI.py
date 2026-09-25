@@ -8,9 +8,10 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
-ver = "v0.1.0"
+ver = "v0.1.1"
 
 console = Console()
 layout = Layout()
@@ -26,14 +27,22 @@ layout.split_column(
 gates = []
 
 # init board
-rows = 20
-cols = 50
+def get_board_dims() -> tuple[int, int]:
+    width, height = console.size
+    # stage panel has a 1-char border on each side; top/bottom bars take 3 rows each
+    usable_width = width - 3
+    usable_height = height - 2 - 3 - 3
+    # each cell renders as 2 chars wide (char + connector/space), 1 row tall
+    board_cols = max(1, usable_width // 2)
+    board_rows = max(1, usable_height)
+    return board_rows, board_cols
+
+rows, cols = get_board_dims()
 board = [[0 for _ in range(cols)] for _ in range(rows)]
 
 topBarText = "File | Edit | View | Help"
 bottomBarText = ("["+clrMain+"]"+"["+clrLite+"]i[/"+clrLite+"]nk")
 
-# --- cursor state ---
 cursor_row = 0
 cursor_col = 0
 
@@ -50,17 +59,21 @@ EDIT_KEY_MAP = {
     "O": 24,
 }
 
+clock = time.strftime("%H:%M:%S")
+topTable = Table.grid(expand=True)
+topTable.add_column(justify="left")
+topTable.add_column(justify="right")
+topTable.add_row(topBarText, Text(clock, style=clrLite))
 
 def make_top_bar(file_name: str = "untitled", modified: bool = False) -> Panel:
     mod_flag = "*" if modified else ""
     return Panel(
-        topBarText,
+        topTable,
         border_style=clrMain,
         box=box.ROUNDED,
         title=f"logiCLI - {file_name}{mod_flag} {ver}",
         title_align="left",
     )
-
 
 def make_bottom_bar() -> Panel:
     return Panel(
@@ -71,8 +84,10 @@ def make_bottom_bar() -> Panel:
         title_align="left",
     )
 
+grid = "·"
+
 GATE_STYLE = {
-    0:  (".","dim"),
+    0:  (grid,"dim"),
     #1:  ("#",""),
    #2:  ("#",""),
     3:  ("╗","white"),
@@ -145,7 +160,6 @@ def make_stage() -> Panel:
     rendered_board = render_board()
     return Panel(rendered_board, border_style=clrMain, box=box.ROUNDED)
 
-
 def update_layout(file_name: str = "untitled", modified: bool = False) -> None:
     layout["top_bar"].update(make_top_bar(file_name, modified))
     layout["stage"].update(make_stage())
@@ -157,6 +171,10 @@ def move_cursor(d_row: int, d_col: int) -> None:
     cursor_row = max(0, min(rows - 1, cursor_row + d_row))
     cursor_col = max(0, min(cols - 1, cursor_col + d_col))
 
+def toggle_grid() -> None:
+    global grid
+    grid = " " if grid == "·" else "·"
+    update_layout(modified=True)
 
 def edit_cell(gate_id: int) -> None:
     board[cursor_row][cursor_col] = gate_id
@@ -200,8 +218,8 @@ update_layout()
 with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
     try:
         while True:
+            clock = time.strftime("%H:%M:%S")
             key = readchar.readkey()
-
             if key == readchar.key.UP:
                 move_cursor(-1, 0)
             elif key == readchar.key.DOWN:
@@ -224,6 +242,8 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
                 rotate_trace_cw()
             elif key == "q":
                 rotate_trace_ccw()
+            elif key == "g":
+                toggle_grid()
             elif key == readchar.key.ENTER:
                 switch_trace()
             elif key in EDIT_KEY_MAP:
