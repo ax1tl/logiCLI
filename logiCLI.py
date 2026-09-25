@@ -1,4 +1,5 @@
 import time
+import json
 from pathlib import Path
 
 import readchar
@@ -11,10 +12,14 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-ver = "v0.1.4"
+ver = "v0.2.0"
 
 console = Console()
 layout = Layout()
+
+current_file: Path | None = None
+is_modified = False
+
 clrMain = "white"
 clrLite = "bright_white"
 
@@ -49,8 +54,6 @@ cursor_col = 0
 # key -> gate id this key writes into the current cell
 EDIT_KEY_MAP = {
     "i":  5,
-    "r": 16,
-    "w": 17,
     "a": 18,
     "o": 19,
     "n": 20,
@@ -159,12 +162,6 @@ def make_stage() -> Panel:
     rendered_board = render_board()
     return Panel(rendered_board, border_style=clrMain, box=box.ROUNDED)
 
-def update_layout(file_name: str = "untitled", modified: bool = False) -> None:
-    layout["top_bar"].update(make_top_bar(file_name, modified))
-    layout["stage"].update(make_stage())
-    layout["bottom_bar"].update(make_bottom_bar())
-
-
 def move_cursor(d_row: int, d_col: int) -> None:
     global cursor_row, cursor_col
     cursor_row = max(0, min(rows - 1, cursor_row + d_row))
@@ -210,7 +207,63 @@ def rotate_trace_ccw() -> None:
                 board[cursor_row][cursor_col] = k
                 break
 
-    
+def board_to_dict() -> dict:
+    return {"rows": rows, "cols": cols, "board": board}
+
+def save_project(path: Path) -> None:
+    path.write_text(json.dumps(board_to_dict()))
+
+def load_project(path: Path) -> None:
+    global board, rows, cols, cursor_row, cursor_col
+    data = json.loads(path.read_text())
+    rows = data["rows"]
+    cols = data["cols"]
+    board = data["board"]
+    cursor_row = min(cursor_row, rows - 1)
+    cursor_col = min(cursor_col, cols - 1)
+
+def new_project() -> None:
+    global board, current_file, is_modified, cursor_row, cursor_col
+    board = [[0 for _ in range(cols)] for _ in range(rows)]
+    current_file = None
+    is_modified = False
+    cursor_row = 0
+    cursor_col = 0
+
+def prompt_input(live: Live, prompt: str, default: str = "") -> str | None:
+    buffer = list(default)
+    while True:
+        layout["bottom_bar"].update(
+            Panel(f"{prompt}{''.join(buffer)}\u2588", border_style=clrMain,
+                  box=box.ROUNDED, title="Input", title_align="left")
+        )
+        live.refresh()
+        key = readchar.readkey()
+        if key == readchar.key.ENTER:
+            return "".join(buffer)
+        elif key == readchar.key.ESC:
+            return None
+        elif key in (readchar.key.BACKSPACE, readchar.key.DELETE):
+            if buffer:
+                buffer.pop()
+        elif len(key) == 1 and key.isprintable():
+            buffer.append(key)
+
+def flash_message(live: Live, message: str) -> None:
+    layout["bottom_bar"].update(
+        Panel(message, border_style="red", box=box.ROUNDED, title="Error", title_align="left")
+    )
+    live.refresh()
+    time.sleep(1.0)
+
+
+
+def update_layout() -> None:
+    layout["top_bar"].update(
+        make_top_bar(current_file.name if current_file else "untitled", is_modified)
+    )
+    layout["stage"].update(make_stage())
+    layout["bottom_bar"].update(make_bottom_bar())
 
 update_layout()
 
@@ -228,25 +281,50 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
                 move_cursor(0, 1)
             elif key in (readchar.key.BACKSPACE, readchar.key.DELETE):
                 edit_cell(0)
+                is_modified = True
             elif key == readchar.key.ESC:
                 break
             elif key == "s":
-                # save to file
-                pass
+                default_name = current_file.name if current_file else "untitled.lgc"
+                result = prompt_input(live, "Save as: ", default=default_name)
+                if result:
+                    try:
+                        path = Path(result)
+                        save_project(path)
+                        current_file = path
+                        is_modified = False
+                    except OSError as e:
+                        flash_message(live, f"Save failed: {e}")
             elif key == "l":
-                # load from file
-                pass
+                result = prompt_input(live, "Load file: ")
+                if result:
+                    path = Path(result)
+                    try:
+                        load_project(path)
+                        current_file = path
+                        is_modified = False
+                    except (OSError, json.JSONDecodeError, KeyError) as e:
+                        flash_message(live, f"Load failed: {e}")
+            elif key == "N":
+                result = prompt_input(live, "Are you sure you want to create a new project? Unsaved changes will be lost. (y/n): ")
+                if result == "y":
+                    new_project()
             elif key == "e" or key == "r":
                 rotate_trace_cw()
+                is_modified = True
             elif key == "q":
                 rotate_trace_ccw()
+                is_modified = True
             elif key == "g":
                 toggle_grid()
+                is_modified = True
             elif key == readchar.key.ENTER:
                 switch_trace()
+                is_modified = True
             elif key in EDIT_KEY_MAP:
                 edit_cell(EDIT_KEY_MAP[key])
+                is_modified = True
 
-            update_layout(modified=True)
+            update_layout()
     except KeyboardInterrupt:
         pass
