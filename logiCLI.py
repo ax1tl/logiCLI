@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-ver = "v0.2.2"
+ver = "v0.2.3"
 
 console = Console()
 layout = Layout()
@@ -56,7 +56,7 @@ def new_project() -> None:
     cursor_col = 0
 
 topBarText = "File | Edit | View | Help"
-bottomBarText = ("(i)nk | (a)nd | (o)r | (x)or | (n)ot | (b)uffer | (I)nput | (O)utput")
+bottomBarText = ("(i)nk | (a)nd | (o)r | (x)or | (n)ot | (b)uffer | (I)nput | (O)utput | (g)rid | (e) rotate | (q) rotate ccw | (Enter) switch trace | (s)ave | (l)oad | (N)ew | (Esc) exit")
 
 cursor_row = 0
 cursor_col = 0
