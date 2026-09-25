@@ -37,7 +37,7 @@ python logiCLI.py
 | `O` | Place an **Output** node |
 | `Backspace` / `Delete` | Clear the current cell |
 | `Enter` | Cycle the trace shape at the cursor (straight ↔ corner ↔ T-junction ↔ cross) |
-| `e` | Rotate the trace at the cursor clockwise |
+| `e` `r` | Rotate the trace at the cursor clockwise |
 | `q` | Rotate the trace at the cursor counter-clockwise |
 | `g` | Toggle the background grid dots on/off |
 
