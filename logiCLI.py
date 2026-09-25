@@ -11,12 +11,12 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-ver = "v0.1.1"
+ver = "v0.1.4"
 
 console = Console()
 layout = Layout()
-clrMain = "bright_black"
-clrLite = "white"
+clrMain = "white"
+clrLite = "bright_white"
 
 layout.split_column(
     Layout(name="top_bar", size=3),
@@ -41,7 +41,7 @@ rows, cols = get_board_dims()
 board = [[0 for _ in range(cols)] for _ in range(rows)]
 
 topBarText = "File | Edit | View | Help"
-bottomBarText = ("["+clrMain+"]"+"["+clrLite+"]i[/"+clrLite+"]nk")
+bottomBarText = ("(i)nk | (a)nd | (o)r | (n)ot | (x)or | (I)nput | (O)utput")
 
 cursor_row = 0
 cursor_col = 0
@@ -59,16 +59,15 @@ EDIT_KEY_MAP = {
     "O": 24,
 }
 
-clock = time.strftime("%H:%M:%S")
-topTable = Table.grid(expand=True)
-topTable.add_column(justify="left")
-topTable.add_column(justify="right")
-topTable.add_row(topBarText, Text(clock, style=clrLite))
-
 def make_top_bar(file_name: str = "untitled", modified: bool = False) -> Panel:
     mod_flag = "*" if modified else ""
+    clock = time.strftime("%H:%M:%S")
+    top_table = Table.grid(expand=True)
+    top_table.add_column(justify="left")
+    top_table.add_column(justify="right")
+    top_table.add_row(topBarText, Text(clock, style=clrLite))
     return Panel(
-        topTable,
+        top_table,
         border_style=clrMain,
         box=box.ROUNDED,
         title=f"logiCLI - {file_name}{mod_flag} {ver}",
@@ -87,22 +86,21 @@ def make_bottom_bar() -> Panel:
 grid = "·"
 
 GATE_STYLE = {
-    0:  (grid,"dim"),
-    #1:  ("#",""),
-   #2:  ("#",""),
-    3:  ("╗","white"),
-    #4:  ("#",""),
-    5:  ("═","white"),
-    6:  ("╔","white"),
-    7:  ("╦","white"),
-    #8:  ("#",""),
-    9:  ("╝","white"),
-    10: ("║","white"),
-    11: ("╣","white"),
-    12: ("╚","white"),
-    13: ("╩","white"),
-    14: ("╠","white"),
-    15: ("╬","white"),
+    #1:  ("╫","white"),
+    2:  ("╳","white"),
+    3:  ("┐","white"),
+    #4:  ("#","white"),
+    5:  ("─","white"),
+    6:  ("┌","white"),
+    7:  ("┬","white"),
+    #8:  ("#","white"),
+    9:  ("┘","white"),
+    10: ("│","white"),
+    11: ("┤","white"),
+    12: ("└","white"),
+    13: ("┴","white"),
+    14: ("├","white"),
+    15: ("┼","white"),
     16: ("r","black on bright_red"),
     17: ("w","black on blue"),
     18: ("a","black on yellow"),
@@ -124,10 +122,11 @@ ROTATE_CW_MAP = {
     7:  11,
     11: 13,
     13: 14,
-    14:  7
+    14:  7,
+    15: 2,
+    2: 15,
 }
 DEFAULT_STYLE = ("#", "dark_red")
-
 TRACE_STYLE = "white"
 
 
@@ -142,16 +141,16 @@ def render_board() -> Text:
         for c, cell in enumerate(row):
             next_cell = row[c + 1] if c + 1 < len(row) else None
             is_traced = next_cell is not None and (
-                (cell in (5, 6, 7, 12, 13, 14, 15))
-                and ((16 <= next_cell <= 25) or (3 <= next_cell <= 15 and next_cell % 2 == 1))
+                (cell in (2, 5, 6, 7, 12, 13, 14, 15))
+                and ((16 <= next_cell <= 25) or (2 <= next_cell <= 15 and (next_cell % 2 == 1 or next_cell == 2)))
             )
-            char, style = GATE_STYLE.get(cell, DEFAULT_STYLE)
+            char, style = (grid, clrMain) if cell == 0 else GATE_STYLE.get(cell, DEFAULT_STYLE)
 
             if r == cursor_row and c == cursor_col:
                 style = invert_style(style)
 
             out.append(char, style=style)
-            out.append("═" if is_traced else " ", style=TRACE_STYLE if is_traced else style)
+            out.append("─" if is_traced else " ", style=TRACE_STYLE if is_traced else style)
         out.append("\n")
     return out
 
@@ -218,7 +217,6 @@ update_layout()
 with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
     try:
         while True:
-            clock = time.strftime("%H:%M:%S")
             key = readchar.readkey()
             if key == readchar.key.UP:
                 move_cursor(-1, 0)
@@ -238,7 +236,7 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
             elif key == "l":
                 # load from file
                 pass
-            elif key == "e":
+            elif key == "e" or key == "r":
                 rotate_trace_cw()
             elif key == "q":
                 rotate_trace_ccw()
