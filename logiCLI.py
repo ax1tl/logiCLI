@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-ver = "v0.2.3"
+ver = "v0.2.4"
 
 console = Console()
 layout = Layout()
@@ -182,7 +182,7 @@ def move_cursor(d_row: int, d_col: int) -> None:
 def toggle_grid() -> None:
     global grid
     grid = " " if grid == "·" else "·"
-    update_layout(modified=True)
+    update_layout()
 
 def edit_cell(gate_id: int) -> None:
     board[cursor_row][cursor_col] = gate_id
@@ -320,19 +320,14 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
                     new_project()
             elif key == "e" or key == "r":
                 rotate_trace_cw()
-                is_modified = True
             elif key == "q":
                 rotate_trace_ccw()
-                is_modified = True
             elif key == "g":
                 toggle_grid()
-                is_modified = True
             elif key == readchar.key.ENTER:
                 switch_trace()
-                is_modified = True
             elif key in EDIT_KEY_MAP:
                 edit_cell(EDIT_KEY_MAP[key])
-                is_modified = True
 
             update_layout()
     except KeyboardInterrupt:
