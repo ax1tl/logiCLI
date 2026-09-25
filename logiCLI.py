@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-ver = "v0.2.0"
+ver = "v0.2.1"
 
 console = Console()
 layout = Layout()
@@ -32,6 +32,7 @@ layout.split_column(
 gates = []
 
 # init board
+
 def get_board_dims() -> tuple[int, int]:
     width, height = console.size
     # stage panel has a 1-char border on each side; top/bottom bars take 3 rows each
@@ -44,6 +45,15 @@ def get_board_dims() -> tuple[int, int]:
 
 rows, cols = get_board_dims()
 board = [[0 for _ in range(cols)] for _ in range(rows)]
+
+def new_project() -> None:
+    global board, current_file, is_modified, cursor_row, cursor_col
+    rows, cols = get_board_dims()
+    board = [[0 for _ in range(cols)] for _ in range(rows)]
+    current_file = None
+    is_modified = False
+    cursor_row = 0
+    cursor_col = 0
 
 topBarText = "File | Edit | View | Help"
 bottomBarText = ("(i)nk | (a)nd | (o)r | (n)ot | (x)or | (I)nput | (O)utput")
@@ -164,6 +174,7 @@ def make_stage() -> Panel:
 
 def move_cursor(d_row: int, d_col: int) -> None:
     global cursor_row, cursor_col
+    rows, cols = get_board_dims()
     cursor_row = max(0, min(rows - 1, cursor_row + d_row))
     cursor_col = max(0, min(cols - 1, cursor_col + d_col))
 
@@ -222,14 +233,6 @@ def load_project(path: Path) -> None:
     cursor_row = min(cursor_row, rows - 1)
     cursor_col = min(cursor_col, cols - 1)
 
-def new_project() -> None:
-    global board, current_file, is_modified, cursor_row, cursor_col
-    board = [[0 for _ in range(cols)] for _ in range(rows)]
-    current_file = None
-    is_modified = False
-    cursor_row = 0
-    cursor_col = 0
-
 def prompt_input(live: Live, prompt: str, default: str = "") -> str | None:
     buffer = list(default)
     while True:
@@ -284,7 +287,7 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
                 is_modified = True
             elif key == readchar.key.ESC:
                 break
-            elif key == "s":
+            elif key == readchar.key.CTRL_S:
                 default_name = current_file.name if current_file else "untitled.lgc"
                 result = prompt_input(live, "Save as: ", default=default_name)
                 if result:
@@ -295,6 +298,11 @@ with Live(layout, console=console, screen=True, refresh_per_second=10) as live:
                         is_modified = False
                     except OSError as e:
                         flash_message(live, f"Save failed: {e}")
+            elif key == "s":
+                path = Path(result)
+                save_project(path)
+                current_file = path
+                is_modified = False
             elif key == "l":
                 result = prompt_input(live, "Load file: ")
                 if result:
