@@ -15,7 +15,7 @@ pip install rich readchar
 ## Running
 
 ```bash
-python main.py
+python logiCLI.py
 ```
 
 ## Controls
