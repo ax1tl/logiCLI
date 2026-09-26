@@ -4,7 +4,7 @@ Nothing in this file has behavior of its own — it's all lookup tables that
 board.py and render.py consult.
 """
 
-VERSION = "v1.1.0"
+VERSION = "v1.1.1"
 
 # Chrome colors --------------------------------------------------------
 COLOR_MAIN = "white"
@@ -15,8 +15,8 @@ DEFAULT_STYLE = ("#", "dark_red")
 TOP_BAR_TEXT = "File | Edit | View | Help"
 BOTTOM_BAR_TEXT = (
     "(i)nk | (a)nd | (o)r | (x)or | (n)ot | (b)uffer | (I)nput | (O)utput | "
-    "(g)rid | (e) rotate | (q) rotate ccw | (Enter) switch trace | "
-    "(Space) test mode | (s)ave | (l)oad | (m)odule | (p)lace module | (N)ew | (Esc) exit"
+    "(g)rid | (q) rotate (e) | (Enter) cycle cell | "
+    "(Space) test mode | (s)ave | (l)oad | (m)odule | (p)lace | (N)ew | (Esc) exit"
 )
 
 # Gate ids ---------------------------------------------------------------
