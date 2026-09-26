@@ -1,8 +1,0 @@
-# KEY CODES FOR GATES:
-# w - 1      - wire
-# a - 2      - and
-# o - 3      - or
-# n - 4      - not
-# x - 5      - xor
-# I - 6,7    - input switch
-# O - 8,9    - output led

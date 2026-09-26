@@ -39,10 +39,16 @@ def prompt_input(live: Live, layout: Layout, prompt: str, default: str = "") -> 
             buffer.append(key)
 
 
-def flash_message(live: Live, layout: Layout, message: str) -> None:
+def flash_message(
+    live: Live,
+    layout: Layout,
+    message: str,
+    title: str = "Error",
+    style: str = "red",
+) -> None:
     """Briefly show an error message in the bottom bar."""
     layout["bottom_bar"].update(
-        Panel(message, border_style="red", box=box.ROUNDED, title="Error", title_align="left")
+        Panel(message, border_style=style, box=box.ROUNDED, title=title, title_align="left")
     )
     live.refresh()
     time.sleep(1.0)

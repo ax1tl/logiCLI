@@ -24,6 +24,14 @@ IO_TOGGLE = {
 }
 
 
+def module_height(module: dict) -> int:
+    return max(
+        C.CUSTOM_MODULE_MIN_HEIGHT,
+        len(module["inputs"]),
+        len(module["outputs"]),
+    )
+
+
 def compute_board_dims(width: int, height: int) -> tuple[int, int]:
     """How many board rows/cols fit in a terminal of the given size.
 
@@ -44,6 +52,7 @@ class Board:
         self.rows = rows
         self.cols = cols
         self.cells = [[C.EMPTY for _ in range(cols)] for _ in range(rows)]
+        self.modules: list[dict] = []
         self.cursor_row = 0
         self.cursor_col = 0
 
@@ -66,7 +75,45 @@ class Board:
         self.cursor_col = max(0, min(self.cols - 1, self.cursor_col + d_col))
 
     def edit_cell(self, gate_id: int) -> None:
+        module = self.module_at(self.cursor_row, self.cursor_col)
+        if module is not None:
+            if gate_id == C.EMPTY:
+                self.modules.remove(module)
+            return
         self.cursor_cell = gate_id
+
+    def module_at(self, row: int, col: int) -> dict | None:
+        for module in self.modules:
+            if (
+                module["row"] <= row < module["row"] + module_height(module)
+                and module["col"] <= col < module["col"] + C.CUSTOM_MODULE_WIDTH
+            ):
+                return module
+        return None
+
+    def place_module(self, row: int, col: int, definition: dict) -> None:
+        inputs = list(definition["inputs"])
+        outputs = dict(definition["outputs"])
+        height = max(C.CUSTOM_MODULE_MIN_HEIGHT, len(inputs), len(outputs))
+        if not 1 <= len(inputs) <= C.MAX_CUSTOM_MODULE_INPUTS:
+            raise ValueError("A placed module must have 1-8 inputs.")
+        if not outputs:
+            raise ValueError("A placed module must have at least one output.")
+        if row < 0 or col < 0 or row + height > self.rows or col + C.CUSTOM_MODULE_WIDTH > self.cols:
+            raise ValueError(f"The {C.CUSTOM_MODULE_WIDTH}x{height} module does not fit at the cursor position.")
+        for module_row in range(row, row + height):
+            for module_col in range(col, col + C.CUSTOM_MODULE_WIDTH):
+                if self.cells[module_row][module_col] != C.EMPTY:
+                    raise ValueError("The module overlaps an occupied cell.")
+                if self.module_at(module_row, module_col) is not None:
+                    raise ValueError("The module overlaps another module.")
+        self.modules.append({
+            "row": row,
+            "col": col,
+            "name": definition["name"],
+            "inputs": inputs,
+            "outputs": outputs,
+        })
 
     def switch_trace(self) -> None:
         """Cycle the cell under the cursor to its next wire/I-O form."""
@@ -89,12 +136,18 @@ class Board:
     # -- persistence -------------------------------------------------
 
     def to_dict(self) -> dict:
-        return {"rows": self.rows, "cols": self.cols, "board": self.cells}
+        return {
+            "rows": self.rows,
+            "cols": self.cols,
+            "board": self.cells,
+            "modules": self.modules,
+        }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Board":
         board = cls(data["rows"], data["cols"])
         board.cells = data["board"]
+        board.modules = data.get("modules", [])
         return board
 
     def save(self, path: Path) -> None:
