@@ -95,6 +95,64 @@ class FormulaForBoardTests(unittest.TestCase):
         self.assertEqual(inputs, ["A"])
         self.assertEqual(formulas, {"O1": "(A)", "O2": "(~A)"})
 
+    def test_dff_module_changes_state_only_on_rising_clock_edge(self):
+        board = Board(4, 7)
+        board.cells[1][0] = C.INPUT
+        board.cells[1][1] = C.WIRE_H
+        board.cells[2][0] = C.INPUT
+        board.cells[2][1] = C.WIRE_H
+        board.place_module(
+            1,
+            2,
+            {
+                "name": "DFF",
+                "kind": "dff",
+                "inputs": ["D", "CLK"],
+                "outputs": {"Q": "state", "Qbar": "not_state"},
+            },
+        )
+        board.cells[1][5] = C.WIRE_H
+        board.cells[1][6] = C.OUTPUT
+        board.cells[2][5] = C.WIRE_H
+        board.cells[2][6] = C.OUTPUT
+        states = {}
+
+        low_clock = simulate_board(board, {(1, 0): True, (2, 0): False}, states)
+        self.assertFalse(low_clock["outputs"][(1, 6)])
+        self.assertTrue(low_clock["outputs"][(2, 6)])
+
+        rising_edge = simulate_board(board, {(1, 0): True, (2, 0): True}, states)
+        self.assertTrue(rising_edge["outputs"][(1, 6)])
+
+        held_high = simulate_board(board, {(1, 0): False, (2, 0): True}, states)
+        self.assertTrue(held_high["outputs"][(1, 6)])
+
+        simulate_board(board, {(1, 0): False, (2, 0): False}, states)
+        falling_edge = simulate_board(board, {(1, 0): False, (2, 0): True}, states)
+        self.assertFalse(falling_edge["outputs"][(1, 6)])
+
+    def test_stateful_module_cannot_be_flattened_as_a_boolean_formula(self):
+        board = Board(4, 6)
+        board.cells[1][0] = C.INPUT
+        board.cells[1][1] = C.WIRE_H
+        board.cells[2][0] = C.INPUT
+        board.cells[2][1] = C.WIRE_H
+        board.place_module(
+            1,
+            2,
+            {
+                "name": "DFF",
+                "kind": "dff",
+                "inputs": ["D", "CLK"],
+                "outputs": {"Q": "state", "Qbar": "not_state"},
+            },
+        )
+        board.cells[1][5] = C.OUTPUT
+        board.cells[2][5] = C.OUTPUT
+
+        with self.assertRaisesRegex(CircuitError, "cannot be flattened"):
+            formulas_for_board(board)
+
     def test_five_input_module_scales_and_routes_all_inputs_from_left(self):
         board = Board(8, 7)
         for row in range(1, 6):
@@ -288,6 +346,35 @@ class FormulaForBoardTests(unittest.TestCase):
                     "name": "Dual output",
                     "inputs": ["A"],
                     "outputs": {"O1": "(A)", "O2": "(~A)"},
+                },
+            )
+
+    def test_saves_rising_edge_dff_kind(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = save_custom_module(
+                "DFF",
+                {"Q": "state", "Qbar": "not_state"},
+                ["D", "CLK"],
+                Path(temporary_directory),
+                kind="dff",
+            )
+
+            self.assertEqual(
+                json.loads(path.read_text()),
+                {
+                    "name": "DFF",
+                    "inputs": ["D", "CLK"],
+                    "kind": "dff",
+                    "outputs": {"Q": "state", "Qbar": "not_state"},
+                },
+            )
+            self.assertEqual(
+                normalize_module_definition(json.loads(path.read_text())),
+                {
+                    "name": "DFF",
+                    "inputs": ["D", "CLK"],
+                    "outputs": {"Q": "state", "Qbar": "not_state"},
+                    "kind": "dff",
                 },
             )
 

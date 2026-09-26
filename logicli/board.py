@@ -107,13 +107,16 @@ class Board:
                     raise ValueError("The module overlaps an occupied cell.")
                 if self.module_at(module_row, module_col) is not None:
                     raise ValueError("The module overlaps another module.")
-        self.modules.append({
+        placed_module = {
             "row": row,
             "col": col,
             "name": definition["name"],
             "inputs": inputs,
             "outputs": outputs,
-        })
+        }
+        if definition.get("kind"):
+            placed_module["kind"] = definition["kind"]
+        self.modules.append(placed_module)
 
     def switch_trace(self) -> None:
         """Cycle the cell under the cursor to its next wire/I-O form."""

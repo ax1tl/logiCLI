@@ -4,7 +4,7 @@ Nothing in this file has behavior of its own — it's all lookup tables that
 board.py and render.py consult.
 """
 
-VERSION = "v1.0.0"
+VERSION = "v1.1.0"
 
 # Chrome colors --------------------------------------------------------
 COLOR_MAIN = "white"

@@ -86,7 +86,7 @@ Use `Ctrl+S` to save a project and `l` to load one. Projects are JSON files cont
 
 ### Custom module definitions
 
-Custom modules are JSON files in `custom_modules/`. Each definition stores its name, input labels, and formula for each output. Older definitions with one `formula` field are read as output `O1`.
+Custom modules are JSON files in `custom_modules/`. Combinational definitions store their name, input labels, and formula for each output. Older definitions with one `formula` field are read as output `O1`. A two-input, two-output circuit with a feedback loop can be explicitly saved as a rising-edge D flip-flop: input `A` maps to `D`, input `B` to `CLK`, and outputs `O1` and `O2` map to `Q` and `Qbar`. In test mode, `Q` starts low, captures `D` on a low-to-high clock transition, and holds its value otherwise. Stateful DFF modules cannot be flattened into a combinational module.
 
 ## Custom modules
 

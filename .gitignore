@@ -1,1 +1,3 @@
 logicli/__pycache__/
+custom_modules/
+*.lgc

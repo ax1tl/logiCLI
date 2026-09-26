@@ -43,6 +43,7 @@ class App:
         self.test_mode = False
         self.test_inputs: dict[tuple[int, int], bool] = {}
         self.simulation: dict | None = None
+        self.module_states: dict[int, dict] = {}
 
     # -- state changes -------------------------------------------------
 
@@ -56,6 +57,7 @@ class App:
         self.test_mode = False
         self.test_inputs = {}
         self.simulation = None
+        self.module_states = {}
 
     def save_as(self, live: Live) -> None:
         default_name = self.current_file.name if self.current_file else "untitled.lgc"
@@ -82,6 +84,7 @@ class App:
             self.board = Board.load(path)
             self.current_file = path
             self.is_modified = False
+            self.module_states = {}
         except (OSError, ValueError, KeyError) as e:
             flash_message(live, self.layout, f"Load failed: {e}")
 
@@ -95,17 +98,42 @@ class App:
             self.new_project()
 
     def save_as_custom_gate(self, live: Live) -> None:
+        kind = None
         try:
             formulas, inputs = formulas_for_board(self.board)
         except CircuitError as e:
-            flash_message(live, self.layout, f"Cannot save module: {e}")
-            return
+            inputs = [
+                cell
+                for line in self.board.cells
+                for cell in line
+                if cell in (C.INPUT, C.INPUT_ACTIVE)
+            ]
+            outputs = [
+                cell
+                for line in self.board.cells
+                for cell in line
+                if cell in (C.OUTPUT, C.OUTPUT_ACTIVE)
+            ]
+            if "feedback loop" not in str(e).lower() or len(inputs) != 2 or len(outputs) != 2:
+                flash_message(live, self.layout, f"Cannot save module: {e}")
+                return
+            confirmation = prompt_input(
+                live,
+                self.layout,
+                "Save as rising-edge DFF? Pins: A=D, B=CLK, O1=Q, O2=Qbar (y/n): ",
+                default="n",
+            )
+            if confirmation != "y":
+                return
+            formulas = {"Q": "state", "Qbar": "not_state"}
+            inputs = ["D", "CLK"]
+            kind = "dff"
 
         name = prompt_input(live, self.layout, "Module name: ")
         if not name:
             return
         try:
-            path = save_custom_module(name, formulas, inputs)
+            path = save_custom_module(name, formulas, inputs, kind=kind)
         except FileExistsError:
             overwrite = prompt_input(
                 live,
@@ -116,7 +144,7 @@ class App:
             if overwrite != "y":
                 return
             try:
-                path = save_custom_module(name, formulas, inputs, overwrite=True)
+                path = save_custom_module(name, formulas, inputs, overwrite=True, kind=kind)
             except (OSError, ValueError) as e:
                 flash_message(live, self.layout, f"Save failed: {e}")
                 return
@@ -173,6 +201,7 @@ class App:
             self.test_mode = False
             self.test_inputs.clear()
             self.simulation = None
+            self.module_states = {}
             return
         self.test_inputs = {
             (row, col): cell == C.INPUT_ACTIVE
@@ -181,11 +210,14 @@ class App:
             if cell in (C.INPUT, C.INPUT_ACTIVE)
         }
         self.test_mode = True
+        self.module_states = {}
         self.refresh_simulation(live)
 
     def refresh_simulation(self, live: Live) -> None:
         try:
-            self.simulation = simulate_board(self.board, self.test_inputs)
+            self.simulation = simulate_board(
+                self.board, self.test_inputs, self.module_states
+            )
         except CircuitError as e:
             self.simulation = None
             flash_message(live, self.layout, f"Test mode: {e}")

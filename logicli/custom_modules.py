@@ -39,7 +39,22 @@ class CircuitError(ValueError):
 
 def normalize_module_definition(data: dict) -> dict:
     """Read both legacy single-output files and the named-output format."""
+    inputs = list(data["inputs"])
     outputs = data.get("outputs")
+    if data.get("kind") == "dff":
+        outputs = outputs or {"Q": "state", "Qbar": "not_state"}
+        if (
+            inputs != ["D", "CLK"]
+            or not isinstance(outputs, dict)
+            or list(outputs.values()) != ["state", "not_state"]
+        ):
+            raise CircuitError("A DFF module must map D, CLK to Q, Qbar.")
+        return {
+            "name": str(data["name"]),
+            "inputs": inputs,
+            "outputs": dict(outputs),
+            "kind": "dff",
+        }
     if outputs is None:
         formula = data.get("formula")
         if formula is None:
@@ -49,7 +64,7 @@ def normalize_module_definition(data: dict) -> dict:
         raise CircuitError("The custom module must define at least one named output.")
     return {
         "name": str(data["name"]),
-        "inputs": list(data["inputs"]),
+        "inputs": inputs,
         "outputs": {str(name): str(formula) for name, formula in outputs.items()},
     }
 
@@ -104,6 +119,7 @@ def formulas_for_board(
     *,
     _input_values: dict[tuple[int, int], bool] | None = None,
     _simulation: dict | None = None,
+    _module_states: dict[int, dict] | None = None,
 ) -> tuple[dict[str, str], list[str]]:
     """Evaluate a circuit and return a sum-of-products formula for each output."""
     inputs = sorted(
@@ -124,6 +140,8 @@ def formulas_for_board(
         if cell in LOGIC_GATES
     }
     modules = [normalize_module_definition(module) for module in board.modules]
+    if _input_values is None and any(module.get("kind") == "dff" for module in modules):
+        raise CircuitError("A stateful DFF cannot be flattened into a combinational module.")
     if not inputs:
         raise CircuitError("Add at least one input node before saving a module.")
     if len(inputs) > C.MAX_CUSTOM_MODULE_INPUTS:
@@ -293,6 +311,7 @@ def formulas_for_board(
     ) -> bool:
         cache: dict[tuple, bool] = {}
         module_input_cache: dict[int, dict[str, bool]] = {}
+        module_state_cache: dict[int, dict[str, bool]] = {}
 
         def evaluate_source(source: tuple, active: set[tuple]) -> bool:
             kind = source[0]
@@ -342,8 +361,28 @@ def formulas_for_board(
                     name: evaluate_source(source_for_module_input(module_index, input_index), module_active)
                     for input_index, name in enumerate(module["inputs"])
                 }
+            module = modules[module_index]
+            if module.get("kind") == "dff":
+                if _module_states is None:
+                    raise CircuitError("DFF simulation requires persistent module state.")
+                if module_index not in module_state_cache:
+                    state = _module_states.setdefault(
+                        module_index, {"q": False, "clock": None}
+                    )
+                    values = module_input_cache[module_index]
+                    clock = values["CLK"]
+                    if state["clock"] is False and clock:
+                        state["q"] = values["D"]
+                    state["clock"] = clock
+                    module_state_cache[module_index] = {
+                        name: state["q"] if meaning == "state" else not state["q"]
+                        for name, meaning in module["outputs"].items()
+                    }
+                result = module_state_cache[module_index][output_name]
+                cache[driver] = result
+                return result
             result = _evaluate_formula(
-                modules[module_index]["outputs"][output_name],
+                module["outputs"][output_name],
                 module_input_cache[module_index],
             )
             cache[driver] = result
@@ -391,7 +430,11 @@ def formulas_for_board(
     return formulas, input_names
 
 
-def simulate_board(board: Board, input_values: dict[tuple[int, int], bool]) -> dict:
+def simulate_board(
+    board: Board,
+    input_values: dict[tuple[int, int], bool],
+    module_states: dict[int, dict] | None = None,
+) -> dict:
     """Evaluate one input assignment and return powered board coordinates."""
     simulation = {
         "gates": {},
@@ -405,7 +448,12 @@ def simulate_board(board: Board, input_values: dict[tuple[int, int], bool]) -> d
         },
         "wires": set(),
     }
-    formulas_for_board(board, _input_values=input_values, _simulation=simulation)
+    formulas_for_board(
+        board,
+        _input_values=input_values,
+        _simulation=simulation,
+        _module_states=module_states if module_states is not None else {},
+    )
     return simulation
 
 
@@ -423,6 +471,7 @@ def save_custom_module(
     inputs: list[str],
     directory: Path = Path("custom_modules"),
     overwrite: bool = False,
+    kind: str | None = None,
 ) -> Path:
     """Save a named module in a JSON file and return its path."""
     safe_name = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip()).strip("_")
@@ -433,7 +482,9 @@ def save_custom_module(
         raise FileExistsError(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     module = {"name": name.strip(), "inputs": inputs}
-    if isinstance(formula, str):
+    if kind == "dff":
+        module.update({"kind": "dff", "outputs": formula})
+    elif isinstance(formula, str):
         module["formula"] = formula
     else:
         module["outputs"] = formula
