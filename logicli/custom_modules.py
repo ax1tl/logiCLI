@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import constants as C
 from .board import Board
+from .streamliner import expr_to_string, load_rules, parse, simplify
 
 UP, RIGHT, DOWN, LEFT = range(4)
 OPPOSITE = {UP: DOWN, RIGHT: LEFT, DOWN: UP, LEFT: RIGHT}
@@ -35,6 +36,23 @@ LOGIC_GATES = {C.AND, C.OR, C.NOT, C.XOR}
 
 class CircuitError(ValueError):
     """The board cannot be represented as a Boolean formula."""
+
+
+def streamline_formula(formula: str) -> str:
+    """Apply the project’s Boolean simplifier to a saved custom-module formula."""
+    formula = formula.strip()
+    if not formula or formula in {"state", "not_state"}:
+        return formula
+
+    rule_path = Path(__file__).resolve().parent.parent / "logiConf" / "ruleCFG.json"
+    if not rule_path.exists():
+        return formula
+
+    try:
+        simplified = simplify(parse(formula), load_rules(str(rule_path)))
+        return expr_to_string(simplified)
+    except (TypeError, ValueError):
+        return formula
 
 
 def normalize_module_definition(data: dict) -> dict:
@@ -65,7 +83,7 @@ def normalize_module_definition(data: dict) -> dict:
     return {
         "name": str(data["name"]),
         "inputs": inputs,
-        "outputs": {str(name): str(formula) for name, formula in outputs.items()},
+        "outputs": {str(name): streamline_formula(str(formula)) for name, formula in outputs.items()},
     }
 
 
@@ -485,10 +503,10 @@ def save_custom_module(
     if kind == "dff":
         module.update({"kind": "dff", "outputs": formula})
     elif isinstance(formula, str):
-        module["formula"] = formula
+        module["formula"] = streamline_formula(formula)
     else:
-        module["outputs"] = formula
-        if len(formula) == 1:
-            module["formula"] = next(iter(formula.values()))
+        module["outputs"] = {key: streamline_formula(value) for key, value in formula.items()}
+        if len(module["outputs"]) == 1:
+            module["formula"] = next(iter(module["outputs"].values()))
     path.write_text(json.dumps(module, indent=2))
     return path
