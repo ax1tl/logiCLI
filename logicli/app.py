@@ -161,7 +161,7 @@ class App:
         )
 
     def place_custom_module(self, live: Live) -> None:
-        module_paths = sorted(Path("custom_modules").glob("*.json"))
+        module_paths = sorted(Path("custom_modules").glob("*.lgm"))
         definitions = []
         for path in module_paths:
             try:
