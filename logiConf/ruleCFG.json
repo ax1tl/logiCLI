@@ -1,0 +1,87 @@
+[
+  {
+    "name": "double_not",
+    "pattern": "~~x",
+    "replace": "x"
+  },
+  {
+    "name": "and_zero",
+    "pattern": "x & 0",
+    "replace": "0"
+  },
+  {
+    "name": "and_one",
+    "pattern": "x & 1",
+    "replace": "x"
+  },
+  {
+    "name": "or_zero",
+    "pattern": "x | 0",
+    "replace": "x"
+  },
+  {
+    "name": "or_one",
+    "pattern": "x | 1",
+    "replace": "1"
+  },
+  {
+    "name": "and_self",
+    "pattern": "x & x",
+    "replace": "x"
+  },
+  {
+    "name": "or_self",
+    "pattern": "x | x",
+    "replace": "x"
+  },
+  {
+    "name": "complement",
+    "pattern": "x & ~x",
+    "replace": "0"
+  },
+  {
+    "name": "demorgans and",
+    "pattern": "~(~x & y)",
+    "replace": "x | ~y"
+  },
+  {
+    "name": "demorgans left and",
+    "pattern": "~(x & ~y)",
+    "replace": "~x | y"
+  },
+  {
+    "name": "demorgans or",
+    "pattern": "~(~x | y)",
+    "replace": "x & ~y"
+  },
+  {
+    "name": "demorgans left or",
+    "pattern": "~(x | ~y)",
+    "replace": "~x & y"
+  },
+  {
+    "name": "combine_complements",
+    "pattern": "(x & y) | (x & ~y)",
+    "replace": "x"
+  },
+  {
+    "name": "combine_complements_2",
+    "pattern": "(x & y) | (~x & y)",
+    "replace": "y"
+  },
+  {
+    "name": "combine_complements_reverse",
+    "pattern": "(x & ~y) | (x & y)",
+    "replace": "x"
+  },
+  {
+    "name": "combine_complements_reverse_2",
+    "pattern": "(~x & y) | (x & y)",
+    "replace": "y"
+  },
+  {
+    "name": "consensus_1",
+    "pattern": "x | (~x & y)",
+    "replace": "x | y"
+  }
+]
