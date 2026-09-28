@@ -39,31 +39,34 @@ def render_board(board: Board, grid_char: str, simulation: dict | None = None) -
     powered_wires = simulation.get("wires", set())
     powered_outputs = simulation.get("outputs", {})
     input_states = simulation.get("inputs", {})
-    module_cells: dict[tuple[int, int], str] = {}
+    module_cells: list[list[str | None]] = [
+        [None] * board.cols for _ in range(board.rows)
+    ]
     for module in board.modules:
         row, col = module["row"], module["col"]
         height = module_height(module)
         for d_row in range(height):
             for d_col in range(C.CUSTOM_MODULE_WIDTH):
-                module_cells[(row + d_row, col + d_col)] = "  "
+                module_cells[row + d_row][col + d_col] = "  "
         for input_index in range(len(module["inputs"])):
-            module_cells[(row + input_index, col)] = "I "
+            module_cells[row + input_index][col] = "I "
         for output_index in range(len(module["outputs"])):
-            module_cells[(row + output_index, col + C.CUSTOM_MODULE_WIDTH - 1)] = "O "
-        module_cells[(row + height // 2, col + 1)] = f"{module['name'][:2].upper():<2}"
+            module_cells[row + output_index][col + C.CUSTOM_MODULE_WIDTH - 1] = "O "
+        module_cells[row + height // 2][col + 1] = f"{module['name'][:2].upper():<2}"
 
     for r, row in enumerate(board.cells):
         for c, cell in enumerate(row):
             next_cell = row[c + 1] if c + 1 < len(row) else None
+            module_cell = module_cells[r][c]
             is_traced = (
                 next_cell is not None
-                and (r, c) not in module_cells
-                and (r, c + 1) not in module_cells
+                and module_cell is None
+                and module_cells[r][c + 1] is None
                 and cell in _TRACE_SOURCES
                 and _is_trace_continuation(next_cell)
             )
-            if (r, c) in module_cells:
-                char, style = module_cells[(r, c)], C.CUSTOM_MODULE_STYLE
+            if module_cell is not None:
+                char, style = module_cell, C.CUSTOM_MODULE_STYLE
             else:
                 if cell in (C.OUTPUT, C.OUTPUT_ACTIVE):
                     cell = C.OUTPUT_ACTIVE if powered_outputs.get((r, c), False) else C.OUTPUT
@@ -81,7 +84,7 @@ def render_board(board: Board, grid_char: str, simulation: dict | None = None) -
                 style = invert_style(style)
 
             out.append(char, style=style)
-            if (r, c) not in module_cells:
+            if module_cell is None:
                 trace_style = "yellow" if (r, c) in powered_wires else C.TRACE_STYLE
                 out.append("─" if is_traced else " ", style=trace_style if is_traced else style)
         out.append("\n")
