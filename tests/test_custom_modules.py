@@ -59,6 +59,7 @@ class FormulaForBoardTests(unittest.TestCase):
     def test_streamline_formula_reduces_saved_boolean_logic(self):
         self.assertEqual(streamline_formula("(A | 0)"), "(A)")
         self.assertEqual(streamline_formula("~(~A & B)"), "(A | ~B)")
+        self.assertEqual(streamline_formula("~(A & ~B)"), "(~A | B)")
         self.assertEqual(streamline_formula("(A & B & 0)"), "0")
         self.assertEqual(streamline_formula("(A | B | 0)"), "(A | B)")
 
