@@ -5,22 +5,42 @@
     "replace": "x"
   },
   {
-    "name": "and_zero",
+    "name": "and_zero_left",
+    "pattern": "0 & x",
+    "replace": "0"
+  },
+  {
+    "name": "and_zero_right",
     "pattern": "x & 0",
     "replace": "0"
   },
   {
-    "name": "and_one",
+    "name": "and_one_left",
+    "pattern": "1 & x",
+    "replace": "x"
+  },
+  {
+    "name": "and_one_right",
     "pattern": "x & 1",
     "replace": "x"
   },
   {
-    "name": "or_zero",
+    "name": "or_zero_left",
+    "pattern": "0 | x",
+    "replace": "x"
+  },
+  {
+    "name": "or_zero_right",
     "pattern": "x | 0",
     "replace": "x"
   },
   {
-    "name": "or_one",
+    "name": "or_one_left",
+    "pattern": "1 | x",
+    "replace": "1"
+  },
+  {
+    "name": "or_one_right",
     "pattern": "x | 1",
     "replace": "1"
   },
@@ -35,74 +55,103 @@
     "replace": "x"
   },
   {
-    "name": "complement",
+    "name": "and_complement",
     "pattern": "x & ~x",
     "replace": "0"
   },
   {
-    "name": "complement_reverse",
+    "name": "and_complement_reverse",
     "pattern": "~x & x",
     "replace": "0"
   },
   {
-    "name": "demorgans and",
-    "pattern": "~(~x & y)",
-    "replace": "x | ~y"
+    "name": "or_complement",
+    "pattern": "x | ~x",
+    "replace": "1"
   },
   {
-    "name": "demorgans left and",
-    "pattern": "~(x & ~y)",
-    "replace": "~x | y"
+    "name": "or_complement_reverse",
+    "pattern": "~x | x",
+    "replace": "1"
   },
   {
-    "name": "demorgans or",
-    "pattern": "~(~x | y)",
-    "replace": "x & ~y"
-  },
-  {
-    "name": "demorgans left or",
-    "pattern": "~(x | ~y)",
-    "replace": "~x & y"
-  },
-  {
-    "name": "combine_complements",
+    "name": "combine_complements_and",
     "pattern": "(x & y) | (x & ~y)",
     "replace": "x"
   },
   {
-    "name": "combine_complements_2",
-    "pattern": "(x & y) | (~x & y)",
-    "replace": "y"
-  },
-  {
-    "name": "combine_complements_reverse",
+    "name": "combine_complements_and_rev",
     "pattern": "(x & ~y) | (x & y)",
     "replace": "x"
   },
   {
-    "name": "combine_complements_reverse_2",
-    "pattern": "(~x & y) | (x & y)",
-    "replace": "y"
+    "name": "combine_complements_or",
+    "pattern": "(x | y) & (x | ~y)",
+    "replace": "x"
   },
   {
-    "name": "consensus_1",
+    "name": "combine_complements_or_rev",
+    "pattern": "(x | ~y) & (x | y)",
+    "replace": "x"
+  },
+  {
+    "name": "absorb_and_left",
+    "pattern": "x & (x | y)",
+    "replace": "x"
+  },
+  {
+    "name": "absorb_and_right",
+    "pattern": "(x | y) & x",
+    "replace": "x"
+  },
+  {
+    "name": "absorb_or_left",
+    "pattern": "x | (x & y)",
+    "replace": "x"
+  },
+  {
+    "name": "absorb_or_right",
+    "pattern": "(x & y) | x",
+    "replace": "x"
+  },
+  {
+    "name": "consensus_and_left",
+    "pattern": "x & (~x | y)",
+    "replace": "x & y"
+  },
+  {
+    "name": "consensus_and_right",
+    "pattern": "x & (y | ~x)",
+    "replace": "x & y"
+  },
+  {
+    "name": "consensus_or_left",
     "pattern": "x | (~x & y)",
     "replace": "x | y"
   },
   {
-    "name": "consensus_2",
+    "name": "consensus_or_right",
     "pattern": "x | (y & ~x)",
     "replace": "x | y"
   },
   {
-    "name": "consensus_3",
-    "pattern": "(~x & y) | x",
-    "replace": "x | y"
+    "name": "demorgan_and",
+    "pattern": "~(x & y)",
+    "replace": "(~x | ~y)"
   },
   {
-    "name": "consensus_4",
-    "pattern": "(y & ~x) | x",
-    "replace": "x | y"
-  
+    "name": "demorgan_or",
+    "pattern": "~(x | y)",
+    "replace": "(~x & ~y)"
+  },
+  {
+    "name": "demorgan_not_literal_and",
+    "pattern": "~(x & ~y)",
+    "replace": "(~x | y)"
+  },
+  {
+    "name": "demorgan_not_literal_or",
+    "pattern": "~(x | ~y)",
+    "replace": "(~x & y)"
   }
 ]

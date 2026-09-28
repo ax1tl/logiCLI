@@ -346,6 +346,6 @@ def simplify(expr: Expr, rules: list[Rule]) -> Expr:
 
         if result is None or result == expr:
             break
-        expr = result
+        expr = simplify(result, rules)
 
     return expr
