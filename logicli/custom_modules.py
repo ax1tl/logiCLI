@@ -491,11 +491,11 @@ def save_custom_module(
     overwrite: bool = False,
     kind: str | None = None,
 ) -> Path:
-    """Save a named module in a JSON file and return its path."""
+    """Save a named module as a JSON file (.lgm) and return its path."""
     safe_name = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip()).strip("_")
     if not safe_name:
         raise ValueError("Enter a name containing at least one letter or number.")
-    path = directory / f"{safe_name}.json"
+    path = directory / f"{safe_name}.lgm"
     if path.exists() and not overwrite:
         raise FileExistsError(path)
     path.parent.mkdir(parents=True, exist_ok=True)
