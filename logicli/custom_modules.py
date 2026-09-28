@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import constants as C
 from .board import Board
-from .streamliner import expr_to_string, load_rules, parse, simplify
+from .streamliner import And, Const, Not, Or, Var, Xor, expr_to_string, load_rules, parse, simplify
 
 UP, RIGHT, DOWN, LEFT = range(4)
 OPPOSITE = {UP: DOWN, RIGHT: LEFT, DOWN: UP, LEFT: RIGHT}
@@ -103,22 +103,52 @@ def load_custom_module(path: Path) -> dict:
 
 
 def _evaluate_formula(formula: str, values: dict[str, bool]) -> bool:
-    if formula == "0":
-        return False
-    if formula == "1":
-        return True
-    for term in formula.split(" | "):
-        literals = term[1:-1].split(" & ")
-        term_value = True
-        for literal in literals:
-            negated = literal.startswith("~")
-            name = literal[1:] if negated else literal
-            if name not in values:
-                raise CircuitError(f"Output formula references unknown input '{name}'.")
-            term_value = term_value and (not values[name] if negated else values[name])
-        if term_value:
-            return True
-    return False
+    def evaluate(expr) -> bool:
+        if isinstance(expr, Const):
+            return expr.value
+        if isinstance(expr, Var):
+            if expr.name not in values:
+                raise CircuitError(f"Output formula references unknown input '{expr.name}'.")
+            return values[expr.name]
+        if isinstance(expr, Not):
+            return not evaluate(expr.x)
+        if isinstance(expr, And):
+            return all(evaluate(item) for item in expr.xs)
+        if isinstance(expr, Or):
+            return any(evaluate(item) for item in expr.xs)
+        if isinstance(expr, Xor):
+            return sum(evaluate(item) for item in expr.xs) % 2 == 1
+        raise CircuitError("The output formula contains an unsupported expression.")
+
+    try:
+        return evaluate(parse(formula))
+    except (TypeError, ValueError) as error:
+        raise CircuitError("The output formula is invalid.") from error
+
+
+def _parity_formula(input_names: list[str], assignments: list[tuple[bool, ...]],
+                    results: list[bool]) -> str | None:
+    if len(assignments) != 1 << len(input_names):
+        return None
+    result_by_assignment = dict(zip(assignments, results))
+    inverted = result_by_assignment[tuple(False for _ in input_names)]
+    selected_indices = []
+    for index, name in enumerate(input_names):
+        basis = tuple(position == index for position in range(len(input_names)))
+        if result_by_assignment[basis] != inverted:
+            selected_indices.append(index)
+    if any(
+        result != (inverted ^ (sum(assignment[index] for index in selected_indices) % 2 == 1))
+        for assignment, result in zip(assignments, results)
+    ):
+        return None
+    if not selected_indices:
+        return "1" if inverted else "0"
+    terms = [input_names[index] for index in selected_indices]
+    if inverted and len(terms) == 1:
+        return f"(~{terms[0]})"
+    expression = f"({' ^ '.join(terms)})"
+    return f"~{expression}" if inverted else expression
 
 
 class _DisjointSet:
@@ -450,14 +480,26 @@ def formulas_for_board(
     for output_index, (output_name, resolved_output) in enumerate(resolved_outputs.items()):
         output_position = outputs[output_index]
         true_terms: list[str] = []
+        results: list[bool] = []
         for assignment in assignments:
-            if evaluate(assignment, resolved_output, output_position):
+            result = evaluate(assignment, resolved_output, output_position)
+            results.append(result)
+            if result:
                 literals = [
                     name if value else f"~{name}"
                     for name, value in zip(input_names, assignment)
                 ]
                 true_terms.append(f"({' & '.join(literals)})")
-        formulas[output_name] = " | ".join(true_terms) if true_terms else "0"
+        parity_formula = (
+            _parity_formula(input_names, assignments, results)
+            if _input_values is None
+            else None
+        )
+        formulas[output_name] = (
+            parity_formula
+            if parity_formula is not None
+            else " | ".join(true_terms) if true_terms else "0"
+        )
     return formulas, input_names
 
 

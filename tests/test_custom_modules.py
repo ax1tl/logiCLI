@@ -10,6 +10,7 @@ from logicli.app import App
 from logicli.board import Board
 from logicli.custom_modules import (
     CircuitError,
+    _evaluate_formula,
     formula_for_board,
     formulas_for_board,
     normalize_module_definition,
@@ -309,7 +310,7 @@ class FormulaForBoardTests(unittest.TestCase):
         self.assertEqual(inputs, ["A"])
         self.assertEqual(formula, "(A)")
 
-    def test_three_input_xor_exports_each_true_minterm(self):
+    def test_three_input_xor_exports_compact_parity_expression(self):
         board = Board(5, 5)
         board.cells[2][0] = C.INPUT
         board.cells[0][2] = C.INPUT
@@ -322,10 +323,33 @@ class FormulaForBoardTests(unittest.TestCase):
 
         formula, _ = formula_for_board(board)
 
-        self.assertEqual(
-            formula,
-            "(~A & ~B & C) | (~A & B & ~C) | (A & ~B & ~C) | (A & B & C)",
-        )
+        self.assertEqual(formula, "(A ^ B ^ C)")
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = save_custom_module(
+                "Parity", formula, ["A", "B", "C"], Path(temporary_directory)
+            )
+            self.assertEqual(json.loads(path.read_text())["formula"], "(A ^ B ^ C)")
+
+    def test_inverted_three_input_xor_exports_compact_expression(self):
+        board = Board(5, 6)
+        board.cells[2][0] = C.INPUT
+        board.cells[0][2] = C.INPUT
+        board.cells[4][2] = C.INPUT
+        board.cells[2][1] = C.WIRE_H
+        board.cells[1][2] = C.WIRE_V
+        board.cells[3][2] = C.WIRE_V
+        board.cells[2][2] = C.XOR
+        board.cells[2][3] = C.NOT
+        board.cells[2][4] = C.OUTPUT
+
+        formula, _ = formula_for_board(board)
+
+        self.assertEqual(formula, "~(A ^ B ^ C)")
+
+    def test_saved_xor_formula_evaluates(self):
+        self.assertTrue(_evaluate_formula("(A ^ B ^ C)", {"A": True, "B": True, "C": True}))
+        self.assertFalse(_evaluate_formula("(A ^ B ^ C)", {"A": True, "B": True, "C": False}))
+        self.assertFalse(_evaluate_formula("~(A ^ B)", {"A": True, "B": False}))
 
     def test_saves_name_inputs_and_formula(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
