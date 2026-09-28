@@ -40,6 +40,11 @@
     "replace": "0"
   },
   {
+    "name": "complement_reverse",
+    "pattern": "~x & x",
+    "replace": "0"
+  },
+  {
     "name": "demorgans and",
     "pattern": "~(~x & y)",
     "replace": "x | ~y"
@@ -83,5 +88,21 @@
     "name": "consensus_1",
     "pattern": "x | (~x & y)",
     "replace": "x | y"
+  },
+  {
+    "name": "consensus_2",
+    "pattern": "x | (y & ~x)",
+    "replace": "x | y"
+  },
+  {
+    "name": "consensus_3",
+    "pattern": "(~x & y) | x",
+    "replace": "x | y"
+  },
+  {
+    "name": "consensus_4",
+    "pattern": "(y & ~x) | x",
+    "replace": "x | y"
+  
   }
 ]

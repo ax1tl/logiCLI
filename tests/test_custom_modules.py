@@ -57,8 +57,10 @@ class FormulaForBoardTests(unittest.TestCase):
         self.assertEqual(formula, "(A & B & C & D)")
 
     def test_streamline_formula_reduces_saved_boolean_logic(self):
-        self.assertEqual(streamline_formula("(A | 0)"), "A")
+        self.assertEqual(streamline_formula("(A | 0)"), "(A)")
         self.assertEqual(streamline_formula("~(~A & B)"), "(A | ~B)")
+        self.assertEqual(streamline_formula("(A & B & 0)"), "0")
+        self.assertEqual(streamline_formula("(A | B | 0)"), "(A | B)")
 
     def test_rejects_missing_output(self):
         board = Board(1, 2)
