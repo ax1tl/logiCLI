@@ -72,12 +72,39 @@ def load_rules(filename: str) -> list[Rule]:
         rules.append(
             Rule(
                 name=item["name"],
-                pattern=tuple(parse(expr) for expr in item["pattern"]),
-                replace=tuple(parse(expr) for expr in item["replace"])
+                pattern=parse(item["pattern"]),
+                replace=parse(item["replace"]),
             )
         )
 
     return rules
+
+
+def expr_to_string(expr: Expr) -> str:
+    """Render an expression back into the project’s Boolean formula syntax."""
+    if isinstance(expr, Var):
+        return expr.name
+
+    if isinstance(expr, Const):
+        return "1" if expr.value else "0"
+
+    if isinstance(expr, Not):
+        inner = expr_to_string(expr.x)
+        if isinstance(expr.x, (And, Or, Xor)):
+            return f"~{inner}"
+        return f"~{inner}"
+
+    if isinstance(expr, And):
+        return f"({' & '.join(expr_to_string(item) for item in expr.xs)})"
+
+    if isinstance(expr, Or):
+        return f"({' | '.join(expr_to_string(item) for item in expr.xs)})"
+
+    if isinstance(expr, Xor):
+        return f"({' ^ '.join(expr_to_string(item) for item in expr.xs)})"
+
+    raise TypeError(f"Unknown expression: {expr}")
+
 
 def parse(text: str) -> Expr:
     """Parse a boolean expression from a string.
@@ -165,7 +192,7 @@ def matching_engine(pattern: Expr, expr: Expr, bindings=None):
     if isinstance(pattern, Not):
         if not isinstance(expr, Not):
             return None
-        return matching_engine(pattern.expr, expr.expr, bindings)
+        return matching_engine(pattern.x, expr.x, bindings)
 
     if isinstance(pattern, And):
         if not isinstance(expr, And):
@@ -231,16 +258,16 @@ def substitute_variables(expr: Expr, bindings: dict[str, Expr]) -> Expr:
         return expr
 
     if isinstance(expr, Not):
-        return Not(substitute_variables(expr.expr, bindings))
+        return Not(substitute_variables(expr.x, bindings))
 
     if isinstance(expr, And):
-        return And([substitute_variables(x, bindings) for x in expr.xs])
+        return And(tuple(substitute_variables(x, bindings) for x in expr.xs))
 
     if isinstance(expr, Or):
-        return Or([substitute_variables(x, bindings) for x in expr.xs])
+        return Or(tuple(substitute_variables(x, bindings) for x in expr.xs))
 
     if isinstance(expr, Xor):
-        return Xor([substitute_variables(x, bindings) for x in expr.xs])
+        return Xor(tuple(substitute_variables(x, bindings) for x in expr.xs))
 
     raise TypeError(f"Unknown expression: {expr}")
 
@@ -287,15 +314,15 @@ def simplify(expr: Expr, rules: list[Rule]) -> Expr:
         Expr: The simplified expression.
     """
 
-    if isinstance(expr, Not): 
+    if isinstance(expr, Not):
         expr = Not(simplify(expr.x, rules))
 
     elif isinstance(expr, And):
-        expr = And([simplify(x, rules) for x in expr.xs])
+        expr = And(tuple(simplify(x, rules) for x in expr.xs))
     elif isinstance(expr, Or):
-        expr = Or([simplify(x, rules) for x in expr.xs])
+        expr = Or(tuple(simplify(x, rules) for x in expr.xs))
     elif isinstance(expr, Xor):
-        expr = Xor([simplify(x, rules) for x in expr.xs])
+        expr = Xor(tuple(simplify(x, rules) for x in expr.xs))
 
     while True:
         result = apply_rules(expr, rules)

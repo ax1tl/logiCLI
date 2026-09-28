@@ -15,6 +15,7 @@ from logicli.custom_modules import (
     normalize_module_definition,
     save_custom_module,
     simulate_board,
+    streamline_formula,
 )
 from logicli.render import render_board
 
@@ -54,6 +55,10 @@ class FormulaForBoardTests(unittest.TestCase):
 
         self.assertEqual(inputs, ["A", "B", "C", "D"])
         self.assertEqual(formula, "(A & B & C & D)")
+
+    def test_streamline_formula_reduces_saved_boolean_logic(self):
+        self.assertEqual(streamline_formula("(A | 0)"), "A")
+        self.assertEqual(streamline_formula("~(~A & B)"), "(A | ~B)")
 
     def test_rejects_missing_output(self):
         board = Board(1, 2)
