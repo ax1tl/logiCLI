@@ -106,6 +106,17 @@ def expr_to_string(expr: Expr) -> str:
     raise TypeError(f"Unknown expression: {expr}")
 
 
+def _combine_associative(op: type[And] | type[Or] | type[Xor], left: Expr, right: Expr):
+    """Flatten repeated associative operators into a single tuple-based node."""
+    terms: list[Expr] = []
+    for operand in (left, right):
+        if isinstance(operand, op):
+            terms.extend(operand.xs)
+        else:
+            terms.append(operand)
+    return op(tuple(terms))
+
+
 def parse(text: str) -> Expr:
     """Parse a boolean expression from a string.
 
@@ -142,11 +153,11 @@ def parse(text: str) -> Expr:
             depth -= 1
         elif depth == 0:
             if char == "|":
-                return Or((parse(text[:i]), parse(text[i + 1:])))
+                return _combine_associative(Or, parse(text[:i]), parse(text[i + 1:]))
             elif char == "^":
-                return Xor((parse(text[:i]), parse(text[i + 1:])))
+                return _combine_associative(Xor, parse(text[:i]), parse(text[i + 1:]))
             elif char == "&":
-                return And((parse(text[:i]), parse(text[i + 1:])))
+                return _combine_associative(And, parse(text[:i]), parse(text[i + 1:]))
 
     if text.startswith("~"):
         return Not(parse(text[1:]))
@@ -159,6 +170,39 @@ def parse(text: str) -> Expr:
         return Var(text)
 
     raise ValueError(f"Invalid expression: {text}")
+
+def _combine_expression(parts: tuple[Expr, ...], op: type[And] | type[Or] | type[Xor]) -> Expr:
+    if len(parts) == 1:
+        return parts[0]
+    return op(parts)
+
+
+def _match_associative(pattern_terms: tuple[Expr, ...], expr_terms: tuple[Expr, ...], bindings: dict[str, Expr], op: type[And] | type[Or] | type[Xor]):
+    if len(pattern_terms) == 0:
+        return bindings if not expr_terms else None
+    if len(pattern_terms) == 1:
+        if len(expr_terms) == 1:
+            return matching_engine(pattern_terms[0], expr_terms[0], bindings)
+        return matching_engine(pattern_terms[0], _combine_expression(expr_terms, op), bindings)
+
+    for split in range(1, len(expr_terms) - len(pattern_terms) + 2):
+        left = expr_terms[:split]
+        right = expr_terms[split:]
+        first_pattern = pattern_terms[0]
+        rest_pattern = pattern_terms[1:]
+        left_expr = _combine_expression(left, op)
+        if len(right) < len(rest_pattern):
+            continue
+        new_bindings = matching_engine(first_pattern, left_expr, bindings)
+        if new_bindings is None:
+            continue
+        if len(rest_pattern) == 0:
+            return new_bindings
+        result = _match_associative(rest_pattern, right, new_bindings, op)
+        if result is not None:
+            return result
+    return None
+
 
 def matching_engine(pattern: Expr, expr: Expr, bindings=None):
     """Match a pattern against an expression and return variable bindings.
@@ -197,44 +241,17 @@ def matching_engine(pattern: Expr, expr: Expr, bindings=None):
     if isinstance(pattern, And):
         if not isinstance(expr, And):
             return None
-
-        if len(pattern.xs) != len(expr.xs):
-            return None
-
-        for p, e in zip(pattern.xs, expr.xs):
-            bindings = matching_engine(p, e, bindings)
-
-            if bindings is None:
-                return None
-        return bindings
+        return _match_associative(pattern.xs, expr.xs, bindings, And)
 
     if isinstance(pattern, Or):
         if not isinstance(expr, Or):
             return None
-
-        if len(pattern.xs) != len(expr.xs):
-            return None
-
-        for p, e in zip(pattern.xs, expr.xs):
-            bindings = matching_engine(p, e, bindings)
-
-            if bindings is None:
-                return None
-        return bindings
+        return _match_associative(pattern.xs, expr.xs, bindings, Or)
 
     if isinstance(pattern, Xor):
         if not isinstance(expr, Xor):
             return None
-
-        if len(pattern.xs) != len(expr.xs):
-            return None
-
-        for p, e in zip(pattern.xs, expr.xs):
-            bindings = matching_engine(p, e, bindings)
-
-            if bindings is None:
-                return None
-        return bindings
+        return _match_associative(pattern.xs, expr.xs, bindings, Xor)
     
     return None
 

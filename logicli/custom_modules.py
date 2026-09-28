@@ -50,9 +50,20 @@ def streamline_formula(formula: str) -> str:
 
     try:
         simplified = simplify(parse(formula), load_rules(str(rule_path)))
-        return expr_to_string(simplified)
+        rendered = expr_to_string(simplified)
     except (TypeError, ValueError):
-        return formula
+        rendered = formula
+
+    if rendered in {"0", "1"}:
+        return rendered
+
+    if rendered.startswith("(") and rendered.endswith(")"):
+        return rendered
+
+    if rendered.startswith("~") or rendered.isidentifier():
+        return f"({rendered})"
+
+    return rendered
 
 
 def normalize_module_definition(data: dict) -> dict:
@@ -94,6 +105,8 @@ def load_custom_module(path: Path) -> dict:
 def _evaluate_formula(formula: str, values: dict[str, bool]) -> bool:
     if formula == "0":
         return False
+    if formula == "1":
+        return True
     for term in formula.split(" | "):
         literals = term[1:-1].split(" & ")
         term_value = True
