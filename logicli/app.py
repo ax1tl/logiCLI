@@ -257,45 +257,49 @@ class App:
             elif key == readchar.key.ESC:
                 return False
             return True
-
-        if key == " ":
-            self.toggle_test_mode(live)
+        else:
+            if key == " ":
+                self.toggle_test_mode(live)
+                return True
+            if key == readchar.key.UP:
+                self.board.move_cursor(-1, 0)
+            elif key == readchar.key.DOWN:
+                self.board.move_cursor(1, 0)
+            elif key == readchar.key.LEFT:
+                self.board.move_cursor(0, -1)
+            elif key == readchar.key.RIGHT:
+                self.board.move_cursor(0, 1)
+            elif key in (readchar.key.BACKSPACE, readchar.key.DELETE):
+                self.board.edit_cell(C.EMPTY)
+                self.is_modified = True
+            elif key == readchar.key.ESC or key.startswith("\x1b"):
+                return False
+            elif key == readchar.key.CTRL_S:
+                self.save_as(live)
+            elif key == "l":
+                self.load(live)
+            elif key == "m":
+                self.save_as_custom_gate(live)
+            elif key == "p":
+                self.place_custom_module(live)
+            elif key == "N":
+                self.confirm_new_project(live)
+            elif key in ("e", "r"):
+                self.board.rotate_cw()
+            elif key == "q":
+                self.board.rotate_ccw()
+            elif key == "g":
+                self.toggle_grid()
+            elif key == readchar.key.ENTER:
+                self.board.switch_trace()
+            elif key in C.EDIT_KEY_MAP:
+                self.board.edit_cell(C.EDIT_KEY_MAP[key])
+                self.is_modified = True
+            """else:
+                key = readchar.readkey()
+                print(repr(key))
+                exit(0)"""
             return True
-        if key == readchar.key.UP:
-            self.board.move_cursor(-1, 0)
-        elif key == readchar.key.DOWN:
-            self.board.move_cursor(1, 0)
-        elif key == readchar.key.LEFT:
-            self.board.move_cursor(0, -1)
-        elif key == readchar.key.RIGHT:
-            self.board.move_cursor(0, 1)
-        elif key in (readchar.key.BACKSPACE, readchar.key.DELETE):
-            self.board.edit_cell(C.EMPTY)
-            self.is_modified = True
-        elif key == readchar.key.ESC:
-            return False
-        elif key == readchar.key.CTRL_S:
-            self.save_as(live)
-        elif key == "l":
-            self.load(live)
-        elif key == "m":
-            self.save_as_custom_gate(live)
-        elif key == "p":
-            self.place_custom_module(live)
-        elif key == "N":
-            self.confirm_new_project(live)
-        elif key in ("e", "r"):
-            self.board.rotate_cw()
-        elif key == "q":
-            self.board.rotate_ccw()
-        elif key == "g":
-            self.toggle_grid()
-        elif key == readchar.key.ENTER:
-            self.board.switch_trace()
-        elif key in C.EDIT_KEY_MAP:
-            self.board.edit_cell(C.EDIT_KEY_MAP[key])
-            self.is_modified = True
-        return True
 
     def run(self) -> None:
         self.refresh_layout()
