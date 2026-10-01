@@ -254,7 +254,7 @@ class App:
                 self.toggle_test_input(live)
             elif key == " ":
                 self.toggle_test_mode(live)
-            elif key == readchar.key.ESC:
+            elif key == readchar.key.ESC or key.startswith("\x1b"):
                 return False
             return True
         else:
