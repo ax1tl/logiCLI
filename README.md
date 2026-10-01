@@ -65,7 +65,7 @@ Place a horizontal trace with `i`. Move to it and press `Enter` to cycle through
 | `Backspace` `Delete` | Clear the cell or remove a module under the cursor |
 | `g` | Toggle grid dots |
 | `Space` | Enter or leave test mode |
-| `Ctrl+S` | Save the current project under a filename |
+| `s` `Ctrl+S` | Save the current project under a filename |
 | `l` | Load a project |
 | `m` | Save the circuit as a custom module |
 | `p` | Place a saved custom module |
@@ -74,15 +74,15 @@ Place a horizontal trace with `i`. Move to it and press `Enter` to cycle through
 
 ## Circuit rules
 
-The formula generator labels input nodes `A`, `B`, `C`, and so on, ordered left to right and then top to bottom within a column. It derives each output's sum-of-products formula from the circuit's connected traces and gates.
+The formula generator labels input nodes `A`, `B`, `C`, and so on, ordered left to right and then top to bottom within a column. It derives each output's Boolean formula from the connected traces and gates, then simplifies it to a shorter equivalent form when possible.
 
-Logic gates have their output on the right. AND, OR, and XOR accept up to three connected inputs from the top, left, and bottom; NOT accepts exactly one. Buffers carry horizontal and vertical signals independently. A circuit used to create a custom module needs at least one input and one output.
+Logic gates face right: their output leaves from the right side, and their inputs are on the top, left, and bottom. AND, OR, and XOR accept up to three connected inputs; NOT accepts exactly one. Two gates connect directly only when the source gate is immediately to the left of the receiving gate. A gate above or below another is not a direct connection. To route a signal between other sides, connect the source gate's right-side output to a trace network, then lead that network to an input side of the receiving gate. The trace openings must face the connected cells. Buffers carry horizontal and vertical signals independently. A circuit used to create a custom module needs at least one input and one output.
 
 ## Projects and files
 
 ### Circuit projects
 
-Use `Ctrl+S` to save a project and `l` to load one. Projects are JSON files containing board dimensions, cell contents, and any placed custom modules. Older project files without module data continue to load.
+Use `s` or `Ctrl+S` to save a project and `l` to load one. Projects are JSON files containing board dimensions, cell contents, and any placed custom modules. Older project files without module data continue to load.
 
 ### Custom module definitions
 

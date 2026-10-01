@@ -57,6 +57,9 @@ def streamline_formula(formula: str) -> str:
     if rendered in {"0", "1"}:
         return rendered
 
+    if rendered.startswith("~(") and rendered.endswith(")"):
+        return rendered
+
     if rendered.startswith("(") and rendered.endswith(")"):
         return rendered
 
@@ -495,10 +498,13 @@ def formulas_for_board(
             if _input_values is None
             else None
         )
-        formulas[output_name] = (
+        formula = (
             parity_formula
             if parity_formula is not None
             else " | ".join(true_terms) if true_terms else "0"
+        )
+        formulas[output_name] = (
+            streamline_formula(formula) if _input_values is None else formula
         )
     return formulas, input_names
 

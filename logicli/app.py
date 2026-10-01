@@ -274,7 +274,7 @@ class App:
                 self.is_modified = True
             elif key == readchar.key.ESC or key.startswith("\x1b"):
                 return False
-            elif key == readchar.key.CTRL_S:
+            elif key in ("s", readchar.key.CTRL_S):
                 self.save_as(live)
             elif key == "l":
                 self.load(live)

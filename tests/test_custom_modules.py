@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import readchar
 
@@ -60,9 +61,28 @@ class FormulaForBoardTests(unittest.TestCase):
     def test_streamline_formula_reduces_saved_boolean_logic(self):
         self.assertEqual(streamline_formula("(A | 0)"), "(A)")
         self.assertEqual(streamline_formula("~(~A & B)"), "(A | ~B)")
-        self.assertEqual(streamline_formula("~(A & ~B)"), "(~A | B)")
+        self.assertEqual(streamline_formula("~(A & ~B)"), "(B | ~A)")
         self.assertEqual(streamline_formula("(A & B & 0)"), "0")
+        self.assertEqual(streamline_formula("(A & 0 & B)"), "0")
+        self.assertEqual(streamline_formula("(A & B & C & D & 1)"), "(A & B & C & D)")
+        self.assertEqual(streamline_formula("(A & B & 1 & C)"), "(A & B & C)")
         self.assertEqual(streamline_formula("(A | B | 0)"), "(A | B)")
+
+    def test_streamliner_finds_shorter_equivalent_for_complex_sop(self):
+        formula = "((~A & ~B & C) | (~A & B & ~C) | (A & ~B & C) | (A & B & C))"
+        simplified = streamline_formula(formula)
+
+        self.assertLess(len(simplified), len(formula))
+        self.assertNotIn("^ 1", simplified)
+        self.assertNotIn("| 0", simplified)
+        for a in (False, True):
+            for b in (False, True):
+                for c in (False, True):
+                    values = {"A": a, "B": b, "C": c}
+                    self.assertEqual(
+                        _evaluate_formula(formula, values),
+                        _evaluate_formula(simplified, values),
+                    )
 
     def test_rejects_missing_output(self):
         board = Board(1, 2)
@@ -262,6 +282,20 @@ class FormulaForBoardTests(unittest.TestCase):
         self.assertTrue(app.simulation["outputs"][(1, 3)])
         self.assertEqual(app.board.cells[1][0], C.INPUT)
 
+    def test_s_key_saves_and_reloads_lgc_board(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "saved.lgc"
+            app = App()
+            app.board.cells[0][0] = C.INPUT
+            app.is_modified = True
+
+            with patch("logicli.app.prompt_input", return_value=str(path)):
+                self.assertTrue(app.handle_key("s", None))
+
+            self.assertEqual(app.current_file, path)
+            self.assertFalse(app.is_modified)
+            self.assertEqual(Board.load(path).to_dict(), app.board.to_dict())
+
     def test_module_placement_rejects_occupied_footprint(self):
         board = Board(5, 5)
         board.cells[2][2] = C.AND
@@ -329,6 +363,30 @@ class FormulaForBoardTests(unittest.TestCase):
                 "Parity", formula, ["A", "B", "C"], Path(temporary_directory)
             )
             self.assertEqual(json.loads(path.read_text())["formula"], "(A ^ B ^ C)")
+
+    def test_inverted_and_into_xor_preserves_all_three_inputs(self):
+        board = Board(5, 8)
+        for row, col, gate in (
+            (2, 0, C.INPUT), (2, 1, C.WIRE_H), (2, 2, C.NOT),
+            (2, 3, C.WIRE_H), (2, 4, C.AND), (2, 5, C.WIRE_H),
+            (2, 6, C.XOR), (2, 7, C.OUTPUT),
+            (0, 4, C.INPUT), (1, 4, C.WIRE_V),
+            (4, 6, C.INPUT), (3, 6, C.WIRE_V),
+        ):
+            board.cells[row][col] = gate
+
+        formula, inputs = formula_for_board(board)
+
+        self.assertEqual(inputs, ["A", "B", "C"])
+        self.assertEqual(formula, "(C ^ (B & ~A))")
+        for a in (False, True):
+            for b in (False, True):
+                for c in (False, True):
+                    values = {"A": a, "B": b, "C": c}
+                    self.assertEqual(
+                        _evaluate_formula(formula, values),
+                        ((not a and b) ^ c),
+                    )
 
     def test_inverted_three_input_xor_exports_compact_expression(self):
         board = Board(5, 6)
