@@ -1,3 +1,4 @@
+Now apart of [Open Development Space](https://github.com/Open-Development-Space)!
 # logiCLI Wiki
 
 Welcome to the logiCLI reference. logiCLI is a terminal-based logic circuit editor built with [Rich](https://github.com/Textualize/rich). This guide covers setup, editing circuits, saving projects, reusable modules, and test mode.
